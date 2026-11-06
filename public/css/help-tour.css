@@ -1,0 +1,277 @@
+/* Tour bantuan (Driver.js) — selaras dengan tema ARSIP TA */
+
+.driver-popover.help-tour-popover {
+  max-width: min(360px, calc(100vw - 24px));
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(45, 27, 70, .22);
+  font-family: 'Poppins', sans-serif;
+  background: #fff;
+  color: var(--text);
+  padding: 18px 16px 14px;
+  box-sizing: border-box;
+}
+
+.driver-popover.help-tour-popover .driver-popover-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: .01em;
+  padding-right: 28px;
+}
+
+.driver-popover.help-tour-popover .driver-popover-description {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.driver-popover.help-tour-popover .driver-popover-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-align: center;
+  width: 100%;
+  margin: 4px 0 2px;
+}
+
+.driver-popover.help-tour-popover .driver-popover-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.driver-popover.help-tour-popover .driver-popover-navigation-btns {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+}
+
+.driver-popover.help-tour-popover .driver-popover-prev-btn,
+.driver-popover.help-tour-popover .driver-popover-next-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  text-shadow: none;
+  text-align: center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.driver-popover.help-tour-popover .driver-popover-next-btn {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: #fff !important;
+  border: none;
+  padding: 12px 16px;
+  box-shadow: 0 8px 20px rgba(122, 28, 172, .28);
+}
+
+.driver-popover.help-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.help-tour-popover .driver-popover-next-btn:focus {
+  background: linear-gradient(135deg, var(--primary-dark, #5d1385), var(--primary));
+  color: #fff !important;
+}
+
+.driver-popover.help-tour-popover .driver-popover-prev-btn {
+  background: #fff;
+  color: var(--primary) !important;
+  border: 2px solid var(--primary);
+  padding: 10px 16px;
+}
+
+.driver-popover.help-tour-popover .driver-popover-prev-btn:hover,
+.driver-popover.help-tour-popover .driver-popover-prev-btn:focus {
+  background: #f3eef8;
+  color: var(--primary) !important;
+}
+
+/* Driver.js kadang menyembunyikan prev di langkah pertama — tetap jaga layout tombol. */
+.driver-popover.help-tour-popover .driver-popover-prev-btn.driver-popover-btn-disabled,
+.driver-popover.help-tour-popover .driver-popover-prev-btn:disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+
+.driver-popover.help-tour-popover .driver-popover-close-btn {
+  color: var(--muted);
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  text-shadow: none;
+}
+
+.driver-popover.help-tour-popover .driver-popover-close-btn:hover {
+  color: var(--primary);
+  background: #f3eef8;
+}
+
+.driver-popover.help-tour-popover .driver-popover-arrow-side-left.driver-popover-arrow,
+.driver-popover.help-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow,
+.driver-popover.help-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow,
+.driver-popover.help-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-color: #fff;
+}
+
+/* Highlight fokus yang ditunjuk tour */
+.driver-active-element,
+.driver-active .driver-active-element {
+  position: relative;
+  z-index: 10056 !important;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 6px var(--primary),
+    0 12px 28px rgba(122, 28, 172, .35) !important;
+  border-radius: 12px;
+  outline: none !important;
+}
+
+.driver-active .driver-overlay,
+.driver-overlay-animated {
+  z-index: 10050;
+}
+
+.driver-active .driver-popover {
+  z-index: 10060;
+}
+
+.help-link.is-tour-running {
+  background: rgba(255, 255, 255, .18);
+}
+
+/* Saat tour: buka/tutup sidebar tanpa animasi agar highlight tepat. */
+.sidebar.tour-sidebar-instant {
+  transition: none !important;
+}
+
+@media (max-width: 992px) {
+  /* Navigasi samping di atas overlay Driver.js saat langkah sidebar. */
+  body.driver-active.tour-sidebar-focus .sidebar.show {
+    z-index: 10055;
+  }
+
+  body.driver-active.tour-sidebar-focus .sidebar-backdrop {
+    z-index: 10051;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Saat fokus sidebar, elemen aktif tetap menonjol di atas sidebar. */
+  body.driver-active.tour-sidebar-focus .driver-active-element {
+    z-index: 10057 !important;
+  }
+
+  .driver-popover.help-tour-popover {
+    max-width: calc(100vw - 16px);
+    width: calc(100vw - 16px);
+    border-radius: 16px;
+    padding: 16px 14px 14px;
+    box-shadow: 0 16px 40px rgba(45, 27, 70, .3);
+  }
+
+  /* Di ponsel, panah sering mengganggu posisi — sembunyikan. */
+  .driver-popover.help-tour-popover .driver-popover-arrow {
+    display: none !important;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-title {
+    font-size: 15px;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-description {
+    font-size: 13px;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-progress-text {
+    order: -1;
+    font-size: 12px;
+    letter-spacing: .02em;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-navigation-btns {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-prev-btn,
+  .driver-popover.help-tour-popover .driver-popover-next-btn {
+    flex: 1 1 50%;
+    min-height: 48px;
+    font-size: 15px;
+    border-radius: 14px;
+    padding: 12px 10px;
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-next-btn {
+    box-shadow: 0 10px 22px rgba(122, 28, 172, .32);
+  }
+
+  .driver-popover.help-tour-popover .driver-popover-close-btn {
+    top: 6px;
+    right: 6px;
+  }
+
+  /* Focus card lebih tegas di ponsel */
+  .driver-active-element,
+  .driver-active .driver-active-element {
+    box-shadow:
+      0 0 0 4px #fff,
+      0 0 0 8px var(--primary),
+      0 0 0 12px rgba(122, 28, 172, .22),
+      0 14px 32px rgba(45, 27, 70, .28) !important;
+    border-radius: 14px;
+    animation: help-tour-pulse 1.6s ease-in-out infinite;
+  }
+
+  /* Overlay lebih gelap agar cutout fokus lebih terbaca */
+  body.driver-active .driver-overlay {
+    opacity: .72 !important;
+  }
+}
+
+@keyframes help-tour-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 4px #fff,
+      0 0 0 8px var(--primary),
+      0 0 0 12px rgba(122, 28, 172, .18),
+      0 14px 32px rgba(45, 27, 70, .28);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px #fff,
+      0 0 0 8px var(--primary),
+      0 0 0 16px rgba(122, 28, 172, .3),
+      0 16px 36px rgba(45, 27, 70, .32);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-active-element,
+  .driver-active .driver-active-element {
+    animation: none !important;
+  }
+}

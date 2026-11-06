@@ -1,0 +1,517 @@
+/* DataTables dark theme for the student portal (search and proof). */
+
+.student-dt {
+  width: 100%;
+}
+
+.student-dt .dataTables_wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: visible;
+  padding: 0;
+  margin: 0;
+}
+
+.student-dt .student-dt-top,
+.student-dt .student-dt-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.student-dt .student-dt-length-source {
+  display: none !important;
+}
+
+.student-dt .student-dt-top-left,
+.student-dt .student-dt-top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.student-dt .dataTables_length,
+.student-dt .dataTables_filter,
+.student-dt .dataTables_info,
+.student-dt .dataTables_paginate {
+  float: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0;
+  position: static;
+  color: #7B6D92;
+  font-size: 13px;
+}
+
+.student-dt .dataTables_length label,
+.student-dt .dataTables_filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #7B6D92;
+  font-weight: 500;
+}
+
+.student-dt .dataTables_length::after,
+.student-dt .dataTables_filter::after,
+.student-dt .dataTables_filter label::after {
+  content: none !important;
+  display: none !important;
+}
+
+.student-dt .dataTables_length select,
+.student-dt .dataTables_filter input {
+  min-height: 44px !important;
+  height: 44px !important;
+  width: auto !important;
+  max-width: 220px;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid #E8DFF1 !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  color: #2D1B46 !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color-scheme: light;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+
+.student-dt .dataTables_length select {
+  min-width: 78px;
+  padding-right: 34px !important;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #fff !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #7B6D92 50%),
+    linear-gradient(135deg, #7B6D92 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 11px) calc(50% - 2px) !important;
+  background-size: 5px 5px, 5px 5px !important;
+  background-repeat: no-repeat !important;
+}
+
+.student-dt .dataTables_length select:hover,
+.student-dt .dataTables_length select:focus,
+.student-dt .dataTables_filter input:focus {
+  border-color: #7A1CAC !important;
+  background-color: #fff !important;
+  box-shadow: 0 0 0 4px rgba(122, 28, 172, .15) !important;
+}
+
+.student-dt .dataTables_length select option {
+  background-color: #fff;
+  color: #2D1B46;
+  font-size: 13px;
+}
+
+.student-dt .dataTables_filter input {
+  min-width: 200px;
+}
+
+.student-dt .dataTables_filter input::placeholder {
+  color: #9A8BB0;
+}
+
+.student-dt .dataTables_filter input:-webkit-autofill,
+.student-dt .dataTables_filter input:-webkit-autofill:hover,
+.student-dt .dataTables_filter input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #2D1B46;
+  caret-color: #2D1B46;
+  box-shadow: 0 0 0 1000px #fff inset;
+  transition: background-color 9999s ease-out;
+}
+
+.student-dt .student-dt-frame {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
+  border: 1px solid #E8DFF1;
+  background: #fff;
+  min-height: 120px;
+}
+
+.student-dt .dataTables_wrapper.is-processing .student-dt-frame > table {
+  opacity: .35;
+  pointer-events: none;
+  filter: saturate(.7);
+}
+
+.student-dt .dataTables_processing {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  z-index: 6;
+  border: none !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, .88) !important;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  box-shadow: none !important;
+  color: #2D1B46 !important;
+}
+
+.student-dt .dataTables_processing[style*="block"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.student-dt .dataTables_processing::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(216, 168, 240, .25);
+  border-top-color: #E4C1F5;
+  animation: student-dt-spin .7s linear infinite;
+}
+
+.student-dt .student-dt-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #E8DFF1;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(45, 27, 70, .12);
+  color: #2D1B46;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.student-dt .student-dt-spinner {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(216, 168, 240, .25);
+  border-top-color: #E4C1F5;
+  animation: student-dt-spin .7s linear infinite;
+}
+
+@keyframes student-dt-spin {
+  to { transform: rotate(360deg); }
+}
+
+.student-dt table.student-dt-table,
+.student-dt table.dataTable {
+  width: 100% !important;
+  min-width: 100%;
+  margin: 0 !important;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: #fff !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible;
+  table-layout: auto;
+}
+
+.student-dt table.student-dt-table thead th,
+.student-dt table.student-dt-table tbody td {
+  padding: 13px 14px;
+  text-align: left;
+  vertical-align: top;
+  border: none;
+  border-bottom: 1px solid #E8DFF1;
+  border-right: none !important;
+}
+
+.student-dt table.student-dt-table thead th,
+.student-dt table.dataTable thead th {
+  position: relative;
+  color: #7B6D92;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: #F7F4FA !important;
+  white-space: nowrap !important;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: normal;
+}
+
+.student-dt table.student-dt-table tbody td {
+  color: #2D1B46;
+  line-height: 1.5;
+  background: #fff !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.student-dt table.student-dt-table td.dataTables_empty {
+  max-width: none;
+}
+
+.student-dt table.student-dt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.student-dt table.student-dt-table tbody tr:hover td {
+  background: #F7F4FA !important;
+}
+
+.student-dt table.student-dt-table thead th.sorting,
+.student-dt table.student-dt-table thead th.sorting_asc,
+.student-dt table.student-dt-table thead th.sorting_desc {
+  cursor: pointer;
+  padding-right: 28px !important;
+}
+
+.student-dt table.student-dt-table thead th.sorting::after,
+.student-dt table.student-dt-table thead th.sorting_asc::after,
+.student-dt table.student-dt-table thead th.sorting_desc::after {
+  font-family: "Font Awesome 7 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+}
+
+.student-dt table.student-dt-table thead th.sorting::after {
+  content: "\f0dc";
+  color: #9A8BB0;
+}
+
+.student-dt table.student-dt-table thead th.sorting_asc::after {
+  content: "\f0de";
+  color: #C158DC;
+}
+
+.student-dt table.student-dt-table thead th.sorting_desc::after {
+  content: "\f0dd";
+  color: #C158DC;
+}
+
+.student-dt table.student-dt-table thead th.no-sort::after {
+  content: none !important;
+}
+
+.student-dt .dataTables_paginate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.student-dt .dataTables_paginate .paginate_button {
+  min-width: 38px;
+  height: 38px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border-radius: 10px !important;
+  border: 1px solid #E8DFF1 !important;
+  background: #fff !important;
+  color: #2D1B46 !important;
+  font-size: 13px !important;
+  font-weight: 600;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.student-dt .dataTables_paginate .paginate_button:hover {
+  background: #F7F4FA !important;
+  border-color: #7A1CAC !important;
+  color: #7A1CAC !important;
+  transform: none !important;
+}
+
+.student-dt .dataTables_paginate .paginate_button.current {
+  background: #7A1CAC !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 0 2px #D8A8F0, 0 0 0 5px rgba(122, 28, 172, .15) !important;
+  color: #fff !important;
+  transform: none !important;
+}
+
+.student-dt .dataTables_paginate .paginate_button.first,
+.student-dt .dataTables_paginate .paginate_button.previous,
+.student-dt .dataTables_paginate .paginate_button.next,
+.student-dt .dataTables_paginate .paginate_button.last {
+  font-size: 0;
+}
+
+.student-dt .dataTables_paginate .paginate_button.first::before,
+.student-dt .dataTables_paginate .paginate_button.previous::before,
+.student-dt .dataTables_paginate .paginate_button.next::before,
+.student-dt .dataTables_paginate .paginate_button.last::before {
+  font-family: "Font Awesome 7 Free";
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.student-dt .dataTables_paginate .paginate_button.first::before { content: "\f100"; }
+.student-dt .dataTables_paginate .paginate_button.last::before { content: "\f101"; }
+.student-dt .dataTables_paginate .paginate_button.next::before { content: "\f054"; }
+.student-dt .dataTables_paginate .paginate_button.previous::before { content: "\f053"; }
+
+.student-dt .dataTables_paginate .paginate_button.disabled,
+.student-dt .dataTables_paginate .paginate_button.disabled:hover {
+  opacity: .45;
+  cursor: default;
+  background: #fff !important;
+  border-color: #E8DFF1 !important;
+  color: #9A8BB0 !important;
+}
+
+.student-dt .col-no {
+  width: 3.75rem;
+  min-width: 3.75rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.student-dt .col-nim {
+  width: 8rem;
+  min-width: 7.5rem;
+  max-width: 9rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.student-dt .col-name {
+  width: 14%;
+  min-width: 11rem;
+}
+
+.student-dt .col-title {
+  width: 30%;
+  min-width: 16rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.student-dt .col-study-program {
+  width: 12%;
+  min-width: 10.5rem;
+}
+
+.student-dt .col-degree,
+.student-dt .col-year {
+  width: 5.75rem;
+  min-width: 5.75rem;
+  white-space: nowrap;
+}
+
+.student-dt .col-date {
+  min-width: 8.5rem;
+  white-space: nowrap;
+}
+
+.student-dt .col-callno {
+  min-width: 8rem;
+  white-space: nowrap;
+}
+
+.student-dt table.student-dt-table tbody td.col-action {
+  width: 1%;
+  min-width: 7.5rem;
+  white-space: nowrap;
+}
+
+.student-dt .proof-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  background: #7A1CAC;
+  border: none;
+  box-shadow: 0 0 0 2px #D8A8F0, 0 0 0 5px rgba(122, 28, 172, .15);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.student-dt .proof-detail-btn:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 900px) {
+  .student-dt .student-dt-top,
+  .student-dt .student-dt-bottom {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .student-dt .student-dt-top-left,
+  .student-dt .student-dt-top-right {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .student-dt .dataTables_paginate {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .student-dt .dataTables_filter,
+  .student-dt .dataTables_length,
+  .student-dt .student-dt-top-left,
+  .student-dt .student-dt-top-right {
+    width: 100%;
+  }
+
+  .student-dt .dataTables_filter input {
+    width: 100% !important;
+    max-width: none;
+    min-width: 0;
+    font-size: 16px !important;
+  }
+
+  .student-dt .dataTables_length select {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .student-dt table.student-dt-table tbody td,
+  .student-dt table.student-dt-table thead th,
+  .student-dt table.dataTable tbody td,
+  .student-dt table.dataTable thead th {
+    padding: 10px 12px;
+  }
+
+  .student-dt .proof-detail-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
