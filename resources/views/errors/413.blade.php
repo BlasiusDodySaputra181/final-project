@@ -1,0 +1,61 @@
+@extends('errors.layout')
+
+@section('title', 'Berkas terlalu besar — ARSIP-TA')
+@section('code', '413')
+@section('label', 'Kelebihan beban')
+@section('heading', 'Unggahan terlalu besar')
+@section('voice', 'Robot pengangkut')
+@section('defaultMessage')
+Peti berkas ini lebih besar dari badan robotnya. Pegas kaki sudah melengkung, kertas meluber, dan lampu beban menyala merah.
+@endsection
+@section('damage')
+    <li>Peti meluber</li>
+    <li>Pegas melengkung</li>
+    <li>Lampu beban merah</li>
+@endsection
+@section('hint')
+Perkecil ukuran berkas atau data yang dikirim, lalu coba lagi.
+@endsection
+@section('actions')
+    <button class="btn" type="button" onclick="history.back()">Kembali dan perkecil berkas</button>
+    <a class="btn btn-ghost" href="{{ url('/') }}">Beranda</a>
+@endsection
+
+@section('robot')
+<svg class="bot bot-413" viewBox="0 0 360 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <ellipse cx="180" cy="396" rx="100" ry="11" fill="#fdba74" opacity=".45"/>
+    <g transform="translate(0 36) rotate(-16 54 78)">
+        <rect x="28" y="58" width="46" height="58" rx="4" fill="#fff" stroke="#fdba74"/>
+        <path d="M36 74h30M36 86h24M36 98h28" stroke="#fb923c" stroke-width="2"/>
+    </g>
+    <g transform="translate(0 36) rotate(14 312 84)">
+        <rect x="286" y="52" width="44" height="62" rx="4" fill="#fff7ed" stroke="#fdba74"/>
+        <path d="M294 70h28M294 82h20M294 94h26" stroke="#fb923c" stroke-width="2"/>
+    </g>
+    <rect x="58" y="54" width="244" height="132" rx="18" fill="#ea580c"/>
+    <rect x="74" y="70" width="212" height="100" rx="12" fill="#fff7ed"/>
+    <path d="M96 94h150M96 112h132M96 130h142M96 148h90" stroke="#fdba74" stroke-width="4" stroke-linecap="round"/>
+    <rect x="214" y="84" width="54" height="22" rx="6" fill="#c2410c"/>
+    <text x="241" y="100" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Poppins, sans-serif">BESAR</text>
+    <ellipse class="sweat" cx="292" cy="214" rx="5" ry="7" fill="#7dd3fc"/>
+    <circle cx="112" cy="214" r="8" fill="#ffedd5" stroke="#9a3412" stroke-width="3"/>
+    <circle cx="248" cy="214" r="8" fill="#ffedd5" stroke="#9a3412" stroke-width="3"/>
+    <rect x="122" y="176" width="116" height="78" rx="26" fill="#c2410c"/>
+    <rect x="132" y="186" width="96" height="58" rx="18" fill="#9a3412"/>
+    <rect x="142" y="196" width="76" height="36" rx="12" fill="#1a1024"/>
+    <path d="M156 214h16M188 214h16" stroke="#fecaca" stroke-width="3" stroke-linecap="round"/>
+    <path d="M164 222h32" stroke="#fecaca" stroke-width="3" stroke-linecap="round"/>
+    <rect x="168" y="250" width="24" height="12" rx="4" fill="#7c2d12"/>
+    <path d="M122 236c-24 6-28 28-16 40" stroke="#c2410c" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <path d="M238 236c24 6 28 28 16 40" stroke="#c2410c" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <rect x="118" y="258" width="124" height="62" rx="20" fill="#9a3412"/>
+    <rect x="132" y="270" width="96" height="36" rx="10" fill="#fff7ed"/>
+    <circle cx="154" cy="288" r="6" fill="#dc2626"/>
+    <circle class="spark" cx="176" cy="288" r="6" fill="#facc15"/>
+    <circle cx="198" cy="288" r="6" fill="#dc2626"/>
+    <path d="M138 320c8 10-8 12 0 20c8 8-8 10 0 18" stroke="#7c2d12" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M214 320c8 10-8 12 0 20c8 8-8 10 0 18" stroke="#7c2d12" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <rect x="122" y="356" width="36" height="16" rx="8" fill="#7c2d12"/>
+    <rect x="198" y="356" width="36" height="16" rx="8" fill="#7c2d12"/>
+</svg>
+@endsection

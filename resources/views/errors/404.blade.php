@@ -1,0 +1,69 @@
+@extends('errors.layout')
+
+@section('title', 'Tidak ditemukan — ARSIP-TA')
+@section('code', '404')
+@section('label', 'Nyasar')
+@section('heading', 'Halaman tidak ditemukan')
+@section('voice', 'Robot pencari')
+@section('defaultMessage')
+Antena pencarinya patah dan laci arsipnya kosong. Robot ini sudah memutar rak, tetapi halaman yang kamu minta tidak ada di mana pun.
+@endsection
+@section('damage')
+    <li>Antena patah</li>
+    <li>Laci kosong</li>
+    <li>Peta sobek</li>
+@endsection
+@section('hint')
+Periksa kembali alamat halaman, atau kembali ke beranda.
+@endsection
+@section('actions')
+    <a class="btn" href="{{ url('/') }}">Kembali ke beranda</a>
+@endsection
+
+@section('robot')
+<svg class="bot bot-404" viewBox="0 0 360 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <ellipse cx="180" cy="392" rx="108" ry="12" fill="#d7b6ea" opacity=".55"/>
+    <g class="paper">
+        <path d="M278 46l52 8-6 46-18 10-40-8z" fill="#fff" stroke="#e4d4f0"/>
+        <path d="M292 68h28M292 80h18M292 92h22" stroke="#c158dc" stroke-width="2" stroke-linecap="round"/>
+        <text x="304" y="112" fill="#7a1cac" font-size="13" font-weight="700" font-family="Poppins, sans-serif">404</text>
+    </g>
+    <path d="M156 74V46" stroke="#5d1385" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="156" cy="38" r="8" fill="#c158dc"/>
+    <path d="M206 72V54" stroke="#5d1385" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="108" cy="132" r="9" fill="#f3e6fa" stroke="#5d1385" stroke-width="3"/>
+    <circle cx="252" cy="132" r="9" fill="#f3e6fa" stroke="#5d1385" stroke-width="3"/>
+    <rect x="118" y="72" width="124" height="108" rx="32" fill="#7a1cac"/>
+    <rect x="126" y="80" width="108" height="92" rx="26" fill="#64148f"/>
+    <rect x="136" y="96" width="88" height="58" rx="16" fill="#1a1024"/>
+    <g class="pupils">
+        <circle cx="160" cy="122" r="8" fill="#9bffd0"/>
+        <circle cx="204" cy="122" r="8" fill="#9bffd0"/>
+        <circle cx="162" cy="120" r="3" fill="#143028"/>
+        <circle cx="206" cy="120" r="3" fill="#143028"/>
+    </g>
+    <path d="M154 146c6-8 12-2 16 2c5 5 8 1 16-6" stroke="#9bffd0" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g class="antenna-broken">
+        <path d="M228 62c22 12 30 28 18 52" stroke="#5d1385" stroke-width="6" stroke-linecap="round" fill="none"/>
+        <circle class="spark" cx="246" cy="118" r="7" fill="#f6c945"/>
+    </g>
+    <rect x="166" y="178" width="28" height="16" rx="6" fill="#4a1270"/>
+    <path d="M118 236c-30 8-46 34-40 64" stroke="#7a1cac" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <circle cx="78" cy="304" r="24" fill="none" stroke="#5d1385" stroke-width="6"/>
+    <circle cx="78" cy="304" r="13" fill="#eaf6ff" opacity=".8"/>
+    <path d="M94 318l16 16" stroke="#5d1385" stroke-width="6" stroke-linecap="round"/>
+    <path d="M242 230c26 14 34 42 22 68" stroke="#7a1cac" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <circle cx="268" cy="304" r="12" fill="#f3e6fa" stroke="#5d1385" stroke-width="3"/>
+    <rect x="102" y="192" width="156" height="124" rx="28" fill="#6b14a0"/>
+    <rect x="120" y="210" width="120" height="82" rx="16" fill="#f8f3fb" stroke="#eadcf4"/>
+    <rect x="134" y="226" width="92" height="34" rx="8" fill="#fff" stroke="#d7c0ea" stroke-dasharray="4 3"/>
+    <text x="180" y="248" text-anchor="middle" fill="#7a1cac" font-size="12" font-weight="700" font-family="Poppins, sans-serif">KOSONG</text>
+    <circle cx="180" cy="274" r="7" fill="#c158dc"/>
+    <rect x="124" y="328" width="40" height="22" rx="10" fill="#4a1270"/>
+    <rect x="196" y="328" width="40" height="22" rx="10" fill="#4a1270"/>
+    <g class="qmark">
+        <circle cx="300" cy="168" r="18" fill="#fff" stroke="#e4d4f0"/>
+        <text x="300" y="175" text-anchor="middle" fill="#7a1cac" font-size="18" font-weight="700" font-family="Poppins, sans-serif">?</text>
+    </g>
+</svg>
+@endsection

@@ -1,0 +1,33 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --sidebar-width: 280px;
+  --topbar-height: 72px;
+  --primary: #7A1CAC;
+  --primary-dark: #5D1385;
+  --secondary: #C158DC;
+  --muted: #7B6D92;
+  --text: #2D1B46;
+  --border: #E4D4F0;
+  --card: #ffffff;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --error-triangle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23DC2626' d='M12 2.4 22.3 20.8H1.7L12 2.4z'/%3E%3Cpath fill='%23fff' d='M11 8.6h2v5.2h-2zm0 6.6h2v2h-2z'/%3E%3C/svg%3E");
+  --error-triangle-inverse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M12 2.4 22.3 20.8H1.7L12 2.4z'/%3E%3Cpath fill='%23DC2626' d='M11 8.6h2v5.2h-2zm0 6.6h2v2h-2z'/%3E%3C/svg%3E");
+}
+
+body {
+  margin: 0;
+  background: #F7F4FA;
+  color: var(--text);
+  font-family: Poppins, "Segoe UI", sans-serif;
+}
+
+/* Loader mulai tersembunyi. Gaya lengkap ada di overlays.css. */
+.loader.hide {
+  display: none !important;
+}

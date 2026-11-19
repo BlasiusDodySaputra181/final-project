@@ -1,0 +1,18 @@
+ARSIP-TA
+
+1. Keluarkan isi berkas zip ini.
+2. Pasang ke perangkat ini dengan berkas Pasang-ke-Perangkat.cmd.
+   Di Linux, macOS, dan Unix lain: sh Pasang-ke-Perangkat.cmd
+3. Pilih tempat pemasangan yang ditawarkan.
+   Folder ini menyiapkan server di lokasi berkas saat ini.
+4. Setelah selesai, buka ARSIP-TA dari pintasan.
+5. Berkas QR-Akses-ARSIP-TA.pdf di folder Desktop berisi kode QR.
+   Pindai dengan ponsel. Tautan https membuka aplikasi dari internet
+   selama perangkat ini menyala dan tersambung.
+   Jika server dimulai ulang, tautan berubah. Unduh kode QR yang baru dari dasbor.
+6. Uninstall berlaku di Windows, Linux, macOS, BSD, Solaris, dan Unix lain.
+   Klik kanan pintasan ARSIP-TA, lalu pilih Uninstall.
+   Di macOS, pilih Services, lalu Uninstall ARSIP-TA.
+   Penghapusan menimpa berkas pemasangan, lalu menghapus program, registri
+   atau berkas layanan, log, pintasan, dan sisa berkas.
+   Folder arsip di luar folder aplikasi tidak dihapus.

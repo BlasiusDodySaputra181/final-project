@@ -1,0 +1,36 @@
+{
+    "name": "ARSIP-TA",
+    "port": 8765,
+    "components": [
+        {
+            "id": "server",
+            "title": "Peladen web",
+            "replaces": "Apache",
+            "detail": "PHP di folder aplikasi melayani situs. Apache tidak dipasang terpisah."
+        },
+        {
+            "id": "database",
+            "title": "Basis data",
+            "replaces": "MySQL",
+            "detail": "Data peladen mandiri tersimpan di database/database.sqlite pada folder ini."
+        },
+        {
+            "id": "database-admin",
+            "title": "Panel basis data",
+            "replaces": "phpMyAdmin",
+            "detail": "Panel hanya terbuka di komputer tempat aplikasi dipasang, bukan dari tautan internet."
+        },
+        {
+            "id": "tunnel",
+            "title": "Tautan internet",
+            "replaces": "Cloudflare",
+            "detail": "Satu tautan Worker Cloudflare dipakai kode QR. Tautan itu disimpan sekali dan tidak berubah."
+        },
+        {
+            "id": "app",
+            "title": "Jendela aplikasi",
+            "replaces": "Sewa peladen",
+            "detail": "Pintasan desktop membuka ARSIP-TA seperti aplikasi. Komputer ini yang menjadi peladen."
+        }
+    ]
+}

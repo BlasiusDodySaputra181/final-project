@@ -1,0 +1,60 @@
+@extends('errors.layout')
+
+@section('title', 'Terlalu banyak percobaan — ARSIP-TA')
+@section('code', '429')
+@section('label', 'Kepanasan')
+@section('heading', 'Terlalu banyak percobaan')
+@section('voice', 'Robot pendingin')
+@section('defaultMessage')
+Permintaan datang terlalu rapat. Kipas di kepala robot berputar kencang, uap keluar dari bahunya, dan matanya sudah berputar.
+@endsection
+@section('damage')
+    <li>Kipas kelewat cepat</li>
+    <li>Uap panas</li>
+    <li>Mata berputar</li>
+@endsection
+@section('hint')
+Tunggu sebentar sampai robotnya dingin, lalu coba lagi.
+@endsection
+@section('actions')
+    <button class="btn" type="button" onclick="location.reload()">Coba lagi</button>
+    <a class="btn btn-ghost" href="{{ url('/') }}">Beranda</a>
+@endsection
+
+@section('robot')
+<svg class="bot bot-429" viewBox="0 0 360 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <ellipse cx="180" cy="392" rx="104" ry="12" fill="#fecaca" opacity=".7"/>
+    <ellipse class="steam" cx="86" cy="168" rx="16" ry="11" fill="#fff"/>
+    <ellipse class="steam d2" cx="274" cy="160" rx="18" ry="12" fill="#fecdd3"/>
+    <ellipse class="steam d3" cx="70" cy="142" rx="11" ry="8" fill="#ffe4e6"/>
+    <g class="fan">
+        <g transform="translate(180 46)">
+            <path d="M0 0C10-6 18-24 6-26C-4-16-4-6 0 0Z" fill="#7f1d1d"/>
+            <path d="M0 0C10-6 18-24 6-26C-4-16-4-6 0 0Z" fill="#dc2626" transform="rotate(120)"/>
+            <path d="M0 0C10-6 18-24 6-26C-4-16-4-6 0 0Z" fill="#fb7185" transform="rotate(240)"/>
+            <circle r="5" fill="#fff7ed"/>
+        </g>
+    </g>
+    <circle cx="108" cy="140" r="9" fill="#fee2e2" stroke="#991b1b" stroke-width="3"/>
+    <circle cx="252" cy="140" r="9" fill="#fee2e2" stroke="#991b1b" stroke-width="3"/>
+    <rect x="118" y="78" width="124" height="108" rx="32" fill="#dc2626"/>
+    <rect x="126" y="86" width="108" height="92" rx="26" fill="#991b1b"/>
+    <rect x="136" y="102" width="88" height="58" rx="16" fill="#1a1024"/>
+    <path d="M150 118c6-8 14-8 16 2c2 8-8 8-8 14" stroke="#fde68a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M192 118c6-8 14-8 16 2c2 8-8 8-8 14" stroke="#fde68a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M156 146c8 4 14-2 24 2c6 3 8-4 14 0" stroke="#fde68a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="166" y="184" width="28" height="16" rx="6" fill="#7f1d1d"/>
+    <path d="M118 240c-34 4-42 28-24 46" stroke="#dc2626" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <path d="M86 292h28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <path d="M242 240c34 4 42 28 24 46" stroke="#dc2626" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <path d="M246 292h28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <rect x="102" y="198" width="156" height="124" rx="28" fill="#b91c1c"/>
+    <rect x="120" y="216" width="120" height="82" rx="16" fill="#fff7ed" stroke="#fecaca"/>
+    <text x="180" y="242" text-anchor="middle" fill="#b91c1c" font-size="13" font-weight="700" font-family="Poppins, sans-serif">PANAS</text>
+    <rect x="168" y="252" width="16" height="36" rx="8" fill="#fff" stroke="#f97316" stroke-width="2"/>
+    <rect x="171" y="266" width="10" height="18" rx="5" fill="#dc2626"/>
+    <circle cx="176" cy="290" r="8" fill="#dc2626"/>
+    <rect x="124" y="334" width="40" height="22" rx="10" fill="#7f1d1d"/>
+    <rect x="196" y="334" width="40" height="22" rx="10" fill="#7f1d1d"/>
+</svg>
+@endsection
