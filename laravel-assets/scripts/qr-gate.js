@@ -1,46 +1,15 @@
 /**
  * One public front door for the library QR.
  * The printed address never changes. The computer posts the current
- * tunnel link to /__arsip/asal, and visitors are forwarded there.
+ * tunnel link to /__arsip/asal, and visitors stay on the saved address
+ * from any network, phone, or other device.
  */
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
         if (url.pathname === '/__arsip/asal') {
-            const auth = request.headers.get('Authorization') || '';
-
-            if (request.method !== 'POST' || auth !== 'Bearer ' + env.GATE) {
-                return text('Tidak ditemukan.', 404);
-            }
-
-            let origin = '';
-
-            try {
-                const payload = await request.json();
-                origin = String(payload.url || '').trim().toLowerCase();
-            } catch {
-                origin = '';
-            }
-
-            const suffix = '.trycloudflare.com';
-            const name = origin.startsWith('https://') && origin.endsWith(suffix)
-                ? origin.slice('https://'.length, -suffix.length)
-                : '';
-
-            if (name.length < 1 || name.includes('.') || !/^[a-z0-9-]+$/.test(name)) {
-                return text('Alamat tidak valid.', 422);
-            }
-
-            await env.TARGET.put('origin', origin);
-
-            return new Response(JSON.stringify({ ok: true, origin }), {
-                status: 200,
-                headers: {
-                    'content-type': 'application/json; charset=utf-8',
-                    'cache-control': 'no-store',
-                },
-            });
+            return storeOrigin(request, env);
         }
 
         const origin = await env.TARGET.get('origin');
@@ -54,16 +23,7 @@ export default {
         dest.protocol = base.protocol;
         dest.host = base.host;
 
-        const headers = new Headers(request.headers);
-        headers.delete('host');
-        headers.delete('cf-connecting-ip');
-        headers.delete('cf-ray');
-        headers.delete('cf-visitor');
-        headers.delete('cf-ipcountry');
-        headers.set('X-Forwarded-Host', url.host);
-        headers.set('X-Forwarded-Proto', 'https');
-        headers.set('X-Forwarded-Port', '443');
-
+        const headers = forwardHeaders(request.headers, url);
         const init = {
             method: request.method,
             headers,
@@ -72,37 +32,154 @@ export default {
 
         if (request.method !== 'GET' && request.method !== 'HEAD') {
             init.body = request.body;
+            init.duplex = 'half';
         }
 
-        let response;
+        const response = await pull(dest, init, request.method);
 
+        if (!response || response.status === 1016 || (response.status >= 520 && response.status <= 530)) {
+            return retryPage('Komputer perpustakaan tidak menjawab. Nyalakan server dan pastikan internet tersambung.', 502);
+        }
+
+        return present(response, origin, url.origin);
+    },
+};
+
+function forwardHeaders(incoming, url) {
+    const headers = new Headers(incoming);
+
+    for (const name of [
+        'host',
+        'cf-connecting-ip',
+        'cf-ray',
+        'cf-visitor',
+        'cf-ipcountry',
+        'cf-ew-via',
+        'cf-worker',
+        'cdn-loop',
+        'accept-encoding',
+        'connection',
+        'keep-alive',
+        'transfer-encoding',
+        'te',
+        'trailer',
+        'upgrade',
+        'proxy-connection',
+    ]) {
+        headers.delete(name);
+    }
+
+    for (const name of [...headers.keys()]) {
+        if (name.startsWith('cf-')) {
+            headers.delete(name);
+        }
+    }
+
+    headers.set('X-Forwarded-Host', url.host);
+    headers.set('X-Forwarded-Proto', 'https');
+    headers.set('X-Forwarded-Port', '443');
+    headers.set('X-Arsip-Front', url.origin);
+
+    return headers;
+}
+
+async function pull(dest, init, method) {
+    const attempts = method === 'GET' || method === 'HEAD' ? 3 : 1;
+    let last = null;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
         try {
-            response = await fetch(dest.toString(), init);
+            const response = await fetch(dest.toString(), init);
+
+            if (response.status !== 530 && response.status !== 1016 && response.status < 520) {
+                return response;
+            }
+
+            last = response;
         } catch {
-            return retryPage('Komputer perpustakaan tidak menjawab. Nyalakan server dan pastikan internet tersambung.', 502);
+            last = null;
         }
 
-        if (response.status === 530 || response.status === 1016) {
-            return retryPage('Komputer perpustakaan tidak menjawab. Nyalakan server dan pastikan internet tersambung.', 502);
+        if (attempt + 1 < attempts) {
+            await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
         }
+    }
 
-        const out = new Headers(response.headers);
-        out.delete('host');
-        out.delete('content-encoding');
-        out.delete('content-length');
-        const location = out.get('Location');
+    return last;
+}
 
-        if (location) {
-            out.set('Location', rewriteLocation(location, origin, url.origin));
-        }
+async function present(response, origin, front) {
+    const out = new Headers(response.headers);
+    out.delete('host');
+    out.delete('content-encoding');
+    out.delete('content-length');
 
+    const location = out.get('Location');
+
+    if (location) {
+        out.set('Location', rewriteLocation(location, origin, front));
+    }
+
+    rewriteCookies(out, new URL(origin).host);
+
+    const type = (out.get('content-type') || '').toLowerCase();
+    const textual = type.startsWith('text/')
+        || type.includes('javascript')
+        || type.includes('json')
+        || type.includes('xml');
+
+    if (!textual) {
         return new Response(response.body, {
             status: response.status,
             statusText: response.statusText,
             headers: out,
         });
-    },
-};
+    }
+
+    const body = rewriteText(await response.text(), origin, front);
+
+    return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: out,
+    });
+}
+
+async function storeOrigin(request, env) {
+    const auth = request.headers.get('Authorization') || '';
+
+    if (request.method !== 'POST' || auth !== 'Bearer ' + env.GATE) {
+        return text('Tidak ditemukan.', 404);
+    }
+
+    let origin = '';
+
+    try {
+        const payload = await request.json();
+        origin = String(payload.url || '').trim().toLowerCase();
+    } catch {
+        origin = '';
+    }
+
+    const suffix = '.trycloudflare.com';
+    const name = origin.startsWith('https://') && origin.endsWith(suffix)
+        ? origin.slice('https://'.length, -suffix.length)
+        : '';
+
+    if (name.length < 1 || name.includes('.') || !/^[a-z0-9-]+$/.test(name)) {
+        return text('Alamat tidak valid.', 422);
+    }
+
+    await env.TARGET.put('origin', origin);
+
+    return new Response(JSON.stringify({ ok: true, origin }), {
+        status: 200,
+        headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+        },
+    });
+}
 
 function retryPage(message, status) {
     const safe = String(message)
@@ -133,8 +210,10 @@ function text(message, status) {
 }
 
 function rewriteLocation(location, origin, front) {
-    if (location.startsWith(origin)) {
-        return front + location.slice(origin.length);
+    const rewritten = rewriteText(location, origin, front);
+
+    if (rewritten !== location) {
+        return rewritten;
     }
 
     try {
@@ -148,4 +227,36 @@ function rewriteLocation(location, origin, front) {
     }
 
     return location;
+}
+
+function rewriteText(text, origin, front) {
+    const originHost = new URL(origin).host;
+    let next = String(text).split(origin).join(front);
+    next = next.split(originHost).join(new URL(front).host);
+    next = next.replace(/https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?/gi, front);
+
+    return next;
+}
+
+function rewriteCookies(headers, originHost) {
+    const cookies = typeof headers.getSetCookie === 'function'
+        ? headers.getSetCookie()
+        : [];
+
+    if (cookies.length === 0) {
+        return;
+    }
+
+    headers.delete('set-cookie');
+    const pattern = new RegExp('(;\\s*)Domain=' + originHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'ig');
+
+    for (const cookie of cookies) {
+        let next = cookie.replace(pattern, '');
+
+        if (!/;\s*Secure\b/i.test(next)) {
+            next += '; Secure';
+        }
+
+        headers.append('set-cookie', next);
+    }
 }

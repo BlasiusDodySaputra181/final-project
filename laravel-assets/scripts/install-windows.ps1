@@ -491,7 +491,8 @@ function Copy-Application([string]$TargetRoot) {
     foreach ($relative in @(
         'laravel-assets\runtime\php',
         'laravel-assets\runtime\cloudflared.exe',
-        'laravel-assets\runtime\vc_redist.x64.exe'
+        'laravel-assets\runtime\vc_redist.x64.exe',
+        'laravel-assets\runtime\gate.txt'
     )) {
         $from = Join-Path $Source $relative
         if (-not (Test-Path -LiteralPath $from)) {

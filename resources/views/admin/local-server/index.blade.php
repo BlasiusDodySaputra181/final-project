@@ -19,7 +19,7 @@
                 serta satu tautan Worker Cloudflare.
                 Tidak perlu sewa peladen. Akun Cloudflare tidak diatur di dalam aplikasi.
                 Saat komputer <strong>luring</strong>, hanya petugas di komputer ini yang dapat menjalankan aplikasi.
-                Saat <strong>daring</strong>, ponsel membuka tautan Worker yang disimpan. Alamat IP tidak dipakai karena berubah saat jaringan berganti.
+                Saat <strong>daring</strong>, Wi-Fi, data seluler, laptop, dan perangkat lain membuka tautan Worker yang sama, dari lokasi mana pun. Alamat IP tidak dipakai karena berubah saat jaringan berganti.
                 Komputer ini harus tetap menyala.
             </span>
         </div>

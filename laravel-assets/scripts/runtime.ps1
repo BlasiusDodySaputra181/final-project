@@ -759,7 +759,7 @@ function Start-CloudflaredLogged([string]$Exe, [string[]]$Arguments) {
         Remove-Item $log -Force
     }
     $proc = Start-Process -FilePath $Exe -ArgumentList $Arguments -WindowStyle Hidden -RedirectStandardError $log -PassThru
-    $deadline = (Get-Date).AddSeconds(45)
+    $deadline = (Get-Date).AddSeconds(70)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 500
         if (Test-Path $log) {
@@ -832,6 +832,34 @@ function Read-StaticTunnel([string]$Php) {
     return @{ link = $link; token = $token }
 }
 
+function Get-TunnelLinkArgs([string[]]$Head, [string[]]$Tail) {
+    # auto tries QUIC, then HTTP/2. IPv4 avoids networks where IPv6 never answers.
+    return $Head + @('--protocol', 'auto', '--edge-ip-version', '4', '--no-autoupdate') + $Tail
+}
+
+function Read-QuickOrigin {
+    $log = Join-Path $Runtime 'tunnel.log'
+    if (-not (Test-Path -LiteralPath $log)) {
+        return ''
+    }
+    $text = Get-Content -Path $log -Raw -ErrorAction SilentlyContinue
+    if ($text -and $text -match 'https://[a-z0-9-]+\.trycloudflare\.com') {
+        return $Matches[0]
+    }
+    return ''
+}
+
+function Send-WorkerOrigin([string]$Front, [string]$Origin) {
+    $gate = Read-GateSecret
+    $payload = '{"url":"' + $Origin + '"}'
+    try {
+        $response = Invoke-WebRequest -Method Post -Uri ($Front.TrimEnd('/') + '/__arsip/asal') -Headers @{ Authorization = "Bearer $gate" } -ContentType 'application/json; charset=utf-8' -Body $payload -UseBasicParsing -TimeoutSec 25
+        return [int]$response.StatusCode -eq 200 -and [string]$response.Content -match '"ok"\s*:\s*true'
+    } catch {
+        return $false
+    }
+}
+
 function Read-GateSecret {
     $path = Join-Path $Runtime 'gate.txt'
     if (-not (Test-Path -LiteralPath $path)) {
@@ -848,6 +876,9 @@ function Read-GateSecret {
 }
 
 function Start-WorkerDoor([string]$Link, [int]$Port, [string]$Php) {
+    # Fail before opening a tunnel. Otherwise the quick address changes and
+    # the printed QR keeps pointing at the previous computer.
+    [void](Read-GateSecret)
     $status = Read-Status
     $tunnelPid = 0
     if ($status.ContainsKey('tunnel_pid') -and $status['tunnel_pid']) {
@@ -860,6 +891,16 @@ function Start-WorkerDoor([string]$Link, [int]$Port, [string]$Php) {
     }
     $front = $Link.TrimEnd('/')
     if ($running -and $public -eq $front) {
+        $kept = Read-QuickOrigin
+        if ($kept) {
+            try {
+                if (-not (Send-WorkerOrigin $front $kept)) {
+                    Write-Status @{ message = 'Tunnel tersambung. Pintu QR belum menerima alamat terbaru.' }
+                }
+            } catch {
+                Write-Status @{ message = 'Tunnel tersambung. Pintu QR belum menerima alamat terbaru.' }
+            }
+        }
         Publish-OnlineQr $Php
         return
     }
@@ -872,12 +913,12 @@ function Start-WorkerDoor([string]$Link, [int]$Port, [string]$Php) {
     if (Test-Path $log) {
         Remove-Item $log -Force
     }
-    $proc = Start-Process -FilePath $exe -ArgumentList @(
-        'tunnel', '--url', "http://127.0.0.1:$Port", '--protocol', 'http2', '--no-autoupdate'
-    ) -WindowStyle Hidden -RedirectStandardError $log -PassThru
+    $proc = Start-Process -FilePath $exe -ArgumentList (Get-TunnelLinkArgs @(
+        'tunnel', '--url', "http://127.0.0.1:$Port"
+    ) @()) -WindowStyle Hidden -RedirectStandardError $log -PassThru
     $origin = ''
     $ready = $false
-    $deadline = (Get-Date).AddSeconds(50)
+    $deadline = (Get-Date).AddSeconds(70)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 500
         if (Test-Path $log) {
@@ -900,15 +941,7 @@ function Start-WorkerDoor([string]$Link, [int]$Port, [string]$Php) {
         }
         throw 'Tunnel ke tautan QR belum terbentuk. Periksa internet, lalu klik Bagikan lagi.'
     }
-    $gate = Read-GateSecret
-    $payload = '{"url":"' + $origin + '"}'
-    $posted = $false
-    try {
-        $response = Invoke-WebRequest -Method Post -Uri ($front + '/__arsip/asal') -Headers @{ Authorization = "Bearer $gate" } -ContentType 'application/json; charset=utf-8' -Body $payload -UseBasicParsing -TimeoutSec 25
-        $posted = [int]$response.StatusCode -eq 200 -and [string]$response.Content -match '"ok"\s*:\s*true'
-    } catch {
-        $posted = $false
-    }
+    $posted = Send-WorkerOrigin $front $origin
     if (-not $posted) {
         Stop-OurProcess $proc.Id 'cloudflared'
         throw 'Tautan QR belum menerima komputer ini. Worker masih Hello World, atau kunci pintu tidak cocok.'
@@ -932,9 +965,7 @@ function Start-NamedTunnel([hashtable]$Static, [string]$Php) {
     if ((Test-Path -LiteralPath $config) -and (Test-Path -LiteralPath $credentials)) {
         Remove-Item Env:TUNNEL_TOKEN -ErrorAction SilentlyContinue
         try {
-            $proc = Start-CloudflaredLogged $exe @(
-                'tunnel', '--config', $config, '--protocol', 'http2', '--no-autoupdate', 'run'
-            )
+            $proc = Start-CloudflaredLogged $exe (Get-TunnelLinkArgs @('tunnel', '--config', $config) @('run'))
         } finally {
             if ($null -ne $previousToken) {
                 $env:TUNNEL_TOKEN = $previousToken
@@ -944,9 +975,7 @@ function Start-NamedTunnel([hashtable]$Static, [string]$Php) {
     if ($null -eq $proc) {
         $env:TUNNEL_TOKEN = [string]$Static.token
         try {
-            $proc = Start-CloudflaredLogged $exe @(
-                'tunnel', '--protocol', 'http2', '--no-autoupdate', 'run'
-            )
+            $proc = Start-CloudflaredLogged $exe (Get-TunnelLinkArgs @('tunnel') @('run'))
         } finally {
             if ($null -eq $previousToken) {
                 Remove-Item Env:TUNNEL_TOKEN -ErrorAction SilentlyContinue
@@ -1486,7 +1515,228 @@ function Get-AppInstallRoots {
     return @($unique.Values)
 }
 
-function Stop-CatalogListener {
+function Get-ProcessAncestors {
+    $ids = New-Object System.Collections.Generic.List[int]
+    $current = $PID
+    for ($i = 0; $i -lt 12; $i++) {
+        try {
+            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue
+        } catch {
+            break
+        }
+        if (-not $proc) {
+            break
+        }
+        $parent = 0
+        try {
+            $parent = [int]$proc.ParentProcessId
+        } catch {
+            break
+        }
+        if ($parent -le 4 -or $ids.Contains($parent)) {
+            break
+        }
+        $ids.Add($parent)
+        $current = $parent
+    }
+    return @($ids)
+}
+
+function Test-InstallProcess($Process, [string[]]$Roots, [int[]]$ExceptIds) {
+    if (-not $Process) {
+        return $false
+    }
+    $procId = 0
+    try {
+        $procId = [int]$Process.ProcessId
+    } catch {
+        return $false
+    }
+    if ($procId -le 4 -or $procId -eq $PID) {
+        return $false
+    }
+    if ($ExceptIds -and ($ExceptIds -contains $procId)) {
+        return $false
+    }
+    $command = [string]$Process.CommandLine
+    $executable = [string]$Process.ExecutablePath
+    if (-not $executable) {
+        try {
+            $live = Get-Process -Id $procId -ErrorAction SilentlyContinue
+            if ($live -and $live.Path) {
+                $executable = [string]$live.Path
+            }
+        } catch {
+        }
+    }
+    if ($command -like '*-Command uninstall*' -or $command -like '*arsip-ta-wipe-*' -or $command -like '*arsip-ta-empty-*' -or $command -like '*Copot-ARSIP-TA*') {
+        return $false
+    }
+    if (Test-PathMatch $executable $Roots) {
+        return $true
+    }
+    if (-not (Test-PathMatch $command $Roots)) {
+        return $false
+    }
+    $name = [string]$Process.Name
+    if (-not $name -and $executable) {
+        $name = Split-Path $executable -Leaf
+    }
+    $holder = $name -in @('php.exe', 'cloudflared.exe', 'wscript.exe', 'cscript.exe', 'powershell.exe', 'pwsh.exe')
+    if (-not $holder) {
+        return $false
+    }
+    foreach ($marker in @('artisan', 'server.php', 'cloudflared', 'app-window', 'ARSIP-TA.vbs', 'runtime.ps1', '-Command start', '-Command install', '-Command share', '-Command ensure')) {
+        if ($command -like "*$marker*") {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Stop-ProcessId([int]$ProcessId) {
+    if ($ProcessId -le 4 -or $ProcessId -eq $PID) {
+        return
+    }
+    & taskkill.exe /PID $ProcessId /T /F 2>$null | Out-Null
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+function Stop-RootServices([string[]]$Roots) {
+    try {
+        $services = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue)
+    } catch {
+        return
+    }
+    foreach ($service in $services) {
+        $pathName = [string]$service.PathName
+        if (-not (Test-PathMatch $pathName $Roots)) {
+            continue
+        }
+        $name = [string]$service.Name
+        if (-not $name) {
+            continue
+        }
+        & sc.exe stop $name 2>$null | Out-Null
+        & sc.exe delete $name 2>$null | Out-Null
+    }
+}
+
+function Get-RuntimeLockFiles([string[]]$Roots) {
+    $files = New-Object System.Collections.Generic.List[string]
+    foreach ($root in $Roots) {
+        if (-not $root) {
+            continue
+        }
+        foreach ($rel in @(
+                'laravel-assets\runtime\cloudflared.exe',
+                'laravel-assets\runtime\tunnel.log',
+                'laravel-assets\runtime\config.yml',
+                'laravel-assets\runtime\php\php.exe'
+            )) {
+            $path = Join-Path $root $rel
+            if (Test-Path -LiteralPath $path) {
+                $files.Add($path)
+            }
+        }
+    }
+    return @($files)
+}
+
+function Get-FileLockers([string[]]$Files) {
+    $existing = @($Files | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+    if ($existing.Count -eq 0) {
+        return @()
+    }
+    if (-not ('ArsipTa.RestartManager' -as [type])) {
+        $signature = @'
+using System;
+using System.Runtime.InteropServices;
+namespace ArsipTa {
+public static class RestartManager {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RM_UNIQUE_PROCESS {
+        public int dwProcessId;
+        public System.Runtime.InteropServices.ComTypes.FILETIME ProcessStartTime;
+    }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct RM_PROCESS_INFO {
+        public RM_UNIQUE_PROCESS Process;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        public string strAppName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+        public string strServiceShortName;
+        public uint ApplicationType;
+        public uint AppStatus;
+        public uint TSSessionId;
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bRestartable;
+    }
+    [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+    public static extern int RmStartSession(out uint pSessionHandle, int dwSessionFlags, System.Text.StringBuilder strSessionKey);
+    [DllImport("rstrtmgr.dll")]
+    public static extern int RmEndSession(uint pSessionHandle);
+    [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+    public static extern int RmRegisterResources(uint pSessionHandle, uint nFiles, string[] rgsFilenames, uint nApplications, IntPtr rgApplications, uint nServices, string[] rgsServiceNames);
+    [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+    public static extern int RmGetList(uint dwSessionHandle, out uint pnProcInfoNeeded, ref uint pnProcInfo, [In, Out] RM_PROCESS_INFO[] rgAffectedApps, ref uint lpdwRebootReasons);
+}
+}
+'@
+        try {
+            Add-Type -TypeDefinition $signature -Language CSharp | Out-Null
+        } catch {
+            return @()
+        }
+    }
+    $handle = [uint32]0
+    $sessionKey = New-Object System.Text.StringBuilder 64
+    $started = [ArsipTa.RestartManager]::RmStartSession([ref]$handle, 0, $sessionKey)
+    if ($started -ne 0) {
+        return @()
+    }
+    try {
+        $registered = [ArsipTa.RestartManager]::RmRegisterResources($handle, [uint32]$existing.Count, [string[]]$existing, 0, [IntPtr]::Zero, 0, $null)
+        if ($registered -ne 0) {
+            return @()
+        }
+        $needed = [uint32]0
+        $count = [uint32]0
+        $reason = [uint32]0
+        $probe = New-Object 'ArsipTa.RestartManager+RM_PROCESS_INFO[]' 1
+        $listed = [ArsipTa.RestartManager]::RmGetList($handle, [ref]$needed, [ref]$count, $probe, [ref]$reason)
+        if ($listed -eq 0) {
+            if ($count -eq 0) {
+                return @()
+            }
+            return @($probe[0].Process.dwProcessId)
+        }
+        if ($listed -ne 234 -or $needed -lt 1) {
+            return @()
+        }
+        $items = New-Object 'ArsipTa.RestartManager+RM_PROCESS_INFO[]' ([int]$needed)
+        $count = $needed
+        $listed = [ArsipTa.RestartManager]::RmGetList($handle, [ref]$needed, [ref]$count, $items, [ref]$reason)
+        if ($listed -ne 0) {
+            return @()
+        }
+        $ids = New-Object System.Collections.Generic.List[int]
+        $limit = [Math]::Min([int]$count, $items.Length)
+        for ($i = 0; $i -lt $limit; $i++) {
+            $ids.Add([int]$items[$i].Process.dwProcessId)
+        }
+        return @($ids)
+    } catch {
+        return @()
+    } finally {
+        try {
+            [ArsipTa.RestartManager]::RmEndSession($handle) | Out-Null
+        } catch {
+        }
+    }
+}
+
+function Stop-CatalogListener([string[]]$Roots) {
     $port = 0
     try {
         $port = Get-CatalogPort
@@ -1499,59 +1749,50 @@ function Stop-CatalogListener {
     } catch {
         return
     }
+    $except = @(Get-ProcessAncestors)
     foreach ($line in $lines) {
         if ($line -notmatch "^\s*TCP\s+\S+:$port\s+\S+\s+LISTENING\s+(\d+)\s*$") {
             continue
         }
         $procId = [int]$Matches[1]
-        if ($procId -le 4 -or $procId -eq $PID) {
-            continue
-        }
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$procId" -ErrorAction SilentlyContinue
-        if (-not $proc) {
+        if (-not (Test-InstallProcess $proc $Roots $except)) {
             continue
         }
-        $command = [string]$proc.CommandLine
-        $name = [string]$proc.Name
-        $ownsApp = $command -like '*artisan*' -or $command -like '*cloudflared*' -or $name -eq 'php.exe' -or $name -eq 'cloudflared.exe'
-        if (-not $ownsApp) {
-            continue
-        }
-        & taskkill.exe /PID $procId /T /F 2>$null | Out-Null
+        Stop-ProcessId $procId
     }
 }
 
 function Stop-InstalledProcesses([string[]]$Roots) {
-    Stop-CatalogListener
-    $markers = @('artisan serve', 'server.php', 'cloudflared.exe', 'app-window', 'ARSIP-TA.vbs', '-Command start', '-Command install')
-    $found = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-            $command = [string]$_.CommandLine
-            $executable = [string]$_.ExecutablePath
-            if ($command -like '*-Command uninstall*') {
-                return $false
+    $except = @(Get-ProcessAncestors)
+    Stop-RootServices $Roots
+    for ($try = 0; $try -lt 8; $try++) {
+        Stop-CatalogListener $Roots
+        $ids = New-Object System.Collections.Generic.List[int]
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | ForEach-Object {
+            if (Test-InstallProcess $_ $Roots $except) {
+                $ids.Add([int]$_.ProcessId)
             }
-            if ([int]$_.ProcessId -eq $PID) {
-                return $false
+        }
+        try {
+            $lockers = @(Get-FileLockers (Get-RuntimeLockFiles $Roots))
+        } catch {
+            $lockers = @()
+        }
+        foreach ($locker in $lockers) {
+            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$locker" -ErrorAction SilentlyContinue
+            if (Test-InstallProcess $proc $Roots $except) {
+                $ids.Add([int]$locker)
             }
-            $matchesRoot = (Test-PathMatch $executable $Roots)
-            if (-not $matchesRoot) {
-                $matchesRoot = (Test-PathMatch $command $Roots)
-            }
-            if ((Test-PathMatch $executable $Roots)) {
-                return $true
-            }
-            if (-not $matchesRoot) {
-                return $false
-            }
-            foreach ($marker in $markers) {
-                if ($command -like "*$marker*") {
-                    return $true
-                }
-            }
-            return $false
-        })
-    foreach ($proc in $found) {
-        & taskkill.exe /PID $proc.ProcessId /T /F 2>$null | Out-Null
+        }
+        $unique = @($ids | Select-Object -Unique)
+        if ($unique.Count -eq 0) {
+            return
+        }
+        foreach ($procId in $unique) {
+            Stop-ProcessId ([int]$procId)
+        }
+        Start-Sleep -Milliseconds 400
     }
 }
 
@@ -2032,14 +2273,79 @@ function Remove-InstallDirectory([string]$Directory) {
     }
     return -not (Test-Path -LiteralPath $Directory)
 }
-foreach ($root in $roots) {
-    foreach ($file in @(Get-AppFiles $root)) { Clear-FileBits $file }
-    Get-ChildItem -LiteralPath $root -Recurse -Force -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-        try { $_.Attributes = [System.IO.FileAttributes]::Directory } catch {}
+function Stop-HeldProcesses([string]$Directory) {
+    $prefix = $Directory.TrimEnd('\')
+    $needle = $prefix + '\'
+    $except = New-Object System.Collections.Generic.List[int]
+    $except.Add($PID)
+    $current = $PID
+    for ($i = 0; $i -lt 12; $i++) {
+        try { $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue } catch { break }
+        if (-not $proc) { break }
+        $parent = 0
+        try { $parent = [int]$proc.ParentProcessId } catch { break }
+        if ($parent -le 4 -or $except.Contains($parent)) { break }
+        $except.Add($parent)
+        $current = $parent
     }
+    try {
+        Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | ForEach-Object {
+            $pathName = [string]$_.PathName
+            if (-not $pathName) { return }
+            $bare = $pathName.Trim().Trim('"')
+            $hit = $bare.Equals($prefix, [System.StringComparison]::OrdinalIgnoreCase) -or $bare.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -or $pathName.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+            if (-not $hit) { return }
+            $serviceName = [string]$_.Name
+            if (-not $serviceName) { return }
+            & sc.exe stop $serviceName 2>$null | Out-Null
+            & sc.exe delete $serviceName 2>$null | Out-Null
+        }
+    } catch {}
+    $ids = New-Object System.Collections.Generic.List[int]
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | ForEach-Object {
+        $procId = [int]$_.ProcessId
+        if ($procId -le 4 -or $except.Contains($procId)) { return }
+        $command = [string]$_.CommandLine
+        $executable = [string]$_.ExecutablePath
+        if (-not $executable) {
+            try {
+                $live = Get-Process -Id $procId -ErrorAction SilentlyContinue
+                if ($live -and $live.Path) { $executable = [string]$live.Path }
+            } catch {}
+        }
+        if ($command -like '*-Command uninstall*' -or $command -like '*arsip-ta-wipe-*' -or $command -like '*arsip-ta-empty-*' -or $command -like '*Copot-ARSIP-TA*') { return }
+        $pathHit = $false
+        if ($executable) {
+            $bareExe = $executable.Trim().Trim('"')
+            $pathHit = $bareExe.Equals($prefix, [System.StringComparison]::OrdinalIgnoreCase) -or $bareExe.StartsWith($needle, [System.StringComparison]::OrdinalIgnoreCase)
+        }
+        if (-not $pathHit -and $command -and $command.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            $name = [string]$_.Name
+            $holder = $name -in @('php.exe', 'cloudflared.exe', 'wscript.exe', 'cscript.exe', 'powershell.exe', 'pwsh.exe')
+            $marker = $command -like '*artisan*' -or $command -like '*cloudflared*' -or $command -like '*runtime.ps1*' -or $command -like '*ARSIP-TA.vbs*' -or $command -like '*-Command start*' -or $command -like '*-Command install*' -or $command -like '*-Command share*'
+            $pathHit = $holder -and $marker
+        }
+        if ($pathHit) { $ids.Add($procId) }
+    }
+    $killed = $false
+    foreach ($procId in @($ids | Select-Object -Unique)) {
+        & taskkill.exe /PID $procId /T /F 2>$null | Out-Null
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+        $killed = $true
+    }
+    if ($killed) { Start-Sleep -Milliseconds 400 }
+}
+foreach ($root in $roots) {
     $gone = $false
     for ($try = 0; $try -lt 20; $try++) {
+        Stop-HeldProcesses $root
         Close-ExplorerAt $root
+        if ($try -eq 0) {
+            foreach ($file in @(Get-AppFiles $root)) { Clear-FileBits $file }
+            Get-ChildItem -LiteralPath $root -Recurse -Force -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                try { $_.Attributes = [System.IO.FileAttributes]::Directory } catch {}
+            }
+        }
         if (Remove-InstallDirectory $root) { $gone = $true; break }
         Start-Sleep -Seconds 1
     }
@@ -2105,7 +2411,7 @@ try {
     if ($remaining.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show('ARSIP-TA sudah dihapus dari komputer ini. Berkas pemasangan ditimpa, lalu folder aplikasi, registri, catatan, pintasan, dan sisa berkas dihapus.', 'ARSIP-TA')
     } else {
-        [System.Windows.Forms.MessageBox]::Show('Sebagian folder masih terkunci. Tutup Laragon atau program yang memakai folder itu, lalu jalankan Copot-ARSIP-TA.cmd lagi.' + [Environment]::NewLine + ($remaining -join [Environment]::NewLine), 'ARSIP-TA')
+        [System.Windows.Forms.MessageBox]::Show('Sebagian folder masih dipakai program yang berjalan, jadi belum terhapus. Tutup program itu, lalu jalankan Copot-ARSIP-TA.cmd lagi.' + [Environment]::NewLine + ($remaining -join [Environment]::NewLine), 'ARSIP-TA')
     }
 } catch {
 }
@@ -2225,6 +2531,52 @@ try {
         'selftest' {
             $installedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ARSIP-TA'
             $verbKey = 'HKCU:\Software\Classes\lnkfile\shell\ARSIPTAUninstall'
+            $lockFixture = Join-Path $env:TEMP ('arsip-ta-lock-' + [guid]::NewGuid().ToString('n'))
+            $held = $null
+            $outsider = $null
+            try {
+                $lockDir = Join-Path $lockFixture 'laravel-assets\runtime'
+                New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+                $lockerExe = Join-Path $lockDir 'cloudflared.exe'
+                Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $lockerExe -Force
+                Set-Content -LiteralPath (Join-Path $lockDir 'config.yml') -Value 'url: http://127.0.0.1:8765' -Encoding ASCII
+                Set-Content -LiteralPath (Join-Path $lockDir 'tunnel.log') -Value 'tunnel' -Encoding ASCII
+                $held = Start-Process -FilePath $lockerExe -ArgumentList @('/d', '/c', 'ping 127.0.0.1 -n 60 >nul') -WorkingDirectory $lockDir -WindowStyle Hidden -PassThru
+                $outsider = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList @('/d', '/c', 'ping 127.0.0.1 -n 60 >nul') -WindowStyle Hidden -PassThru
+                Start-Sleep -Milliseconds 700
+                if (-not $held -or $held.HasExited) {
+                    throw 'Proses pengunci uji tidak berjalan.'
+                }
+                if (-not $outsider -or $outsider.HasExited) {
+                    throw 'Proses pembanding di luar folder tidak berjalan.'
+                }
+                Stop-InstalledProcesses @($lockFixture)
+                $stillHeld = Get-Process -Id $held.Id -ErrorAction SilentlyContinue
+                if ($stillHeld -and -not $stillHeld.HasExited) {
+                    throw 'Proses yang mengunci folder pemasangan masih berjalan.'
+                }
+                $stillOutside = Get-Process -Id $outsider.Id -ErrorAction SilentlyContinue
+                if (-not $stillOutside -or $stillOutside.HasExited) {
+                    throw 'Proses di luar folder pemasangan terhenti.'
+                }
+                Remove-Item -LiteralPath $lockerExe -Force -ErrorAction Stop
+                Remove-Item -LiteralPath (Join-Path $lockDir 'config.yml') -Force -ErrorAction Stop
+                Remove-Item -LiteralPath (Join-Path $lockDir 'tunnel.log') -Force -ErrorAction Stop
+                if (Test-Path -LiteralPath $lockerExe) {
+                    throw 'Berkas cloudflared yang terkunci masih ada.'
+                }
+                Write-Output 'SELFTEST LOCK OK'
+            } finally {
+                if ($held -and -not $held.HasExited) {
+                    Stop-Process -Id $held.Id -Force -ErrorAction SilentlyContinue
+                }
+                if ($outsider -and -not $outsider.HasExited) {
+                    Stop-Process -Id $outsider.Id -Force -ErrorAction SilentlyContinue
+                }
+                if ($lockFixture -and (Test-Path -LiteralPath $lockFixture)) {
+                    Remove-Item -LiteralPath $lockFixture -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
             if ((Test-Path -LiteralPath $installedKey) -or (Test-Path -LiteralPath $verbKey)) {
                 Write-Output 'SELFTEST SKIP sudah terpasang'
                 break

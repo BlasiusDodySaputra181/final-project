@@ -10,7 +10,7 @@
         <div>
             <h2>Kode QR Akses</h2>
             @if ($onlineLogin !== '')
-                <p>Pindai kode ini untuk membuka aplikasi. Tautan Worker ini tersimpan sekali dan tidak berubah selamanya. Cetak pratinjau ini untuk petugas dan koordinator.</p>
+                <p>Pindai kode ini dari Wi-Fi, data seluler, atau perangkat lain, di lokasi mana pun. Tautan Worker ini tersimpan sekali dan tidak berubah selamanya. Cetak pratinjau ini untuk petugas dan koordinator. Komputer ini harus menyala dan tersambung ke internet.</p>
             @else
                 <p>Simpan satu tautan Worker Cloudflare di peladen lokal. Setelah tersimpan, kode QR di sini tetap sama.</p>
             @endif

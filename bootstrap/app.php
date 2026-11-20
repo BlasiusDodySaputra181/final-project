@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureLocalConsole;
 use App\Http\Middleware\EnsureOfficer;
 use App\Http\Middleware\EnsureStudent;
 use App\Http\Middleware\ResolveAdminSession;
+use App\Http\Middleware\UseStaticAccessHost;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -33,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO
                 | Request::HEADER_X_FORWARDED_PREFIX,
         );
+
+        $middleware->append(UseStaticAccessHost::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

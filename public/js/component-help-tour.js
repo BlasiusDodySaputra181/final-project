@@ -206,7 +206,7 @@
                 `Tour singkat fitur di halaman ini. ${roleNote}`
             ),
             [
-                step('#buttongenerateaccessqr', 'Kode QR akses', 'Pratinjau kode QR tautan Cloudflare statis yang tersimpan. Lihat dan cetak untuk petugas atau koordinator. Tautan tidak berubah selamanya.', 'bottom'),
+                step('#buttongenerateaccessqr', 'Kode QR akses', 'Pratinjau kode QR tautan Cloudflare statis. Wi-Fi, data seluler, dan perangkat lain membuka tautan yang sama dari lokasi mana pun. Tautan tidak berubah selamanya.', 'bottom'),
                 step('#dashboardstats', 'Kartu ringkasan', 'Angka cepat: total pengunjung, total tugas akhir, serta status masa simpan (belum atau sudah 10 tahun).', 'bottom'),
                 step('#statvisitors', 'Total pengunjung', 'Jumlah kunjungan yang tercatat di modul Pengunjung.', 'bottom'),
                 step('#statfinalprojects', 'Total tugas akhir', 'Jumlah seluruh dokumen tugas akhir yang tersimpan.', 'bottom'),
@@ -471,7 +471,7 @@
                 'Komputer ini menjadi peladen. Luring hanya petugas di komputer ini yang menjalankan aplikasi. Daring, klien yang menerima tautan dapat masuk selama komputer menyala. Tidak perlu sewa peladen.'
             ),
             [
-                step('#cloudflaresettings', 'Tautan kode QR', 'Tempel satu tautan Worker Cloudflare, sekali. Setelah disimpan, tautan itu terkunci dan kode QR tidak berubah. Ponsel memakai tautan itu.', 'bottom'),
+                step('#cloudflaresettings', 'Tautan kode QR', 'Tempel satu tautan Worker Cloudflare, sekali. Setelah disimpan, tautan itu terkunci. Ponsel dan perangkat lain memakai tautan itu dari jaringan mana pun.', 'bottom'),
                 step('#devicecapacity', 'Kapasitas memori', 'Bandingkan sisa ruang perangkat dengan ukuran basis data dan berkas arsip tugas akhir. Kedua persentase ditampilkan terpisah.', 'bottom'),
                 step('#installplacement', 'Basis data dan berkas', 'Pakai berkas basis data lama atau buat baru, dan pilih folder ARSIP TUGAS AKHIR yang sudah ada atau buat baru.', 'bottom'),
                 step('#localdatabaseexport', 'Ekspor dan impor', 'Unduh basis data untuk komputer lain, atau impor berkas dari pemasangan lain agar data yang sama dipakai di setiap aplikasi.', 'top'),

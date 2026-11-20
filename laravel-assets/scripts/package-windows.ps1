@@ -44,6 +44,7 @@ function Test-Skipped([string]$RelativePath) {
         $rel -eq 'laravel-assets/runtime/php' -or
         $rel -eq 'laravel-assets/runtime/cloudflared.exe' -or
         $rel -eq 'laravel-assets/runtime/vc_redist.x64.exe' -or
+        $rel -eq 'laravel-assets/runtime/gate.txt' -or
         $rel -eq 'laravel-assets/runtime/.gitignore' -or
         $rel.StartsWith('laravel-assets/runtime/php/')
     if (-not $bundledRuntime) {
