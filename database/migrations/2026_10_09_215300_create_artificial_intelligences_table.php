@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('artificial_intelligences')) {
+            return;
+        }
+
         Schema::create('artificial_intelligences', function (Blueprint $table) {
             $table->id();
             $table->text('key');

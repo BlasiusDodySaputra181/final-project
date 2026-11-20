@@ -7,6 +7,7 @@ use App\Models\FinalProject;
 use App\Models\FinalProjectType;
 use App\Models\StudyProgram;
 use App\Setup\Crud;
+use App\Support\BulkInsert;
 use App\Support\CatalogCache;
 use App\Support\DataTables;
 use App\Support\FinalProjectStorage;
@@ -32,6 +33,20 @@ class FinalProjectCrud extends Crud
     private const FILE_COLUMN = 8;
 
     private const APPROVAL_SHEET_COLUMN = 9;
+
+    /**
+     * Comparable study-program text => stored name. First id wins.
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $importProgramByNeedle = null;
+
+    /**
+     * Final-project types ordered by id, without a blank level.
+     *
+     * @var list<FinalProjectType>|null
+     */
+    private ?array $importTypes = null;
 
     // --- Read, upload, and assemble data ---
 
@@ -343,6 +358,81 @@ class FinalProjectCrud extends Crud
     }
 
     /**
+     * @return array<string, string>
+     */
+    private function importProgramByNeedle(): array
+    {
+        if ($this->importProgramByNeedle !== null) {
+            return $this->importProgramByNeedle;
+        }
+
+        $map = [];
+
+        foreach (StudyProgram::query()->orderBy('id')->get(['study_program']) as $program) {
+            $name = (string) $program->study_program;
+
+            if (trim($name) === '') {
+                continue;
+            }
+
+            $needle = $this->comparableDegreeText($name);
+
+            if ($needle !== '' && ! isset($map[$needle])) {
+                $map[$needle] = $name;
+            }
+        }
+
+        return $this->importProgramByNeedle = $map;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function importProgramNames(): array
+    {
+        return array_values($this->importProgramByNeedle());
+    }
+
+    /**
+     * @return list<FinalProjectType>
+     */
+    private function importTypes(): array
+    {
+        if ($this->importTypes !== null) {
+            return $this->importTypes;
+        }
+
+        return $this->importTypes = FinalProjectType::query()
+            ->orderBy('id')
+            ->get(['id', 'level', 'type'])
+            ->filter(fn ($type) => trim((string) $type->level) !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function importLevelNames(): array
+    {
+        $levels = [];
+
+        foreach ($this->importTypes() as $type) {
+            $levels[(string) $type->level] = true;
+        }
+
+        return array_keys($levels);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function importTypeIds(): array
+    {
+        return array_map(static fn (FinalProjectType $type): int => (int) $type->id, $this->importTypes());
+    }
+
+    /**
      * Match each imported level to Jenis Tugas Akhir by text only, ignoring case.
      * Rewrites the value to the stored level so a later exact lookup still succeeds.
      *
@@ -353,13 +443,19 @@ class FinalProjectCrud extends Crud
     protected function alignImportDegreeLevels(array $levels, array $typeIds): array
     {
         $example = 'misalnya S1 = skripsi, S2 = tesis, S3 = disertasi, dan jenis lainnya';
-        $types = FinalProjectType::query()
-            ->orderBy('id')
-            ->get(['id', 'level', 'type'])
-            ->filter(fn ($type) => trim((string) $type->level) !== '')
-            ->values();
+        $byLevel = [];
+        $byName = [];
 
-        if ($types->isEmpty()) {
+        foreach ($this->importTypes() as $type) {
+            $byLevel[$this->comparableDegreeText($type->level)][] = $type;
+            $nameKey = $this->comparableDegreeText($type->type);
+
+            if ($nameKey !== '') {
+                $byName[$nameKey][] = $type;
+            }
+        }
+
+        if ($byLevel === []) {
             throw ValidationException::withMessages([
                 'degree_level' => 'Tidak ada data jenis tugas akhir, sehingga impor tidak disimpan. Isi Jenis Tugas Akhir terlebih dahulu, '.$example.'.',
             ]);
@@ -377,27 +473,23 @@ class FinalProjectCrud extends Crud
                 continue;
             }
 
-            $byLevel = $types
-                ->filter(fn ($type) => $this->comparableDegreeText($type->level) === $needle)
-                ->values();
+            $levelMatches = $byLevel[$needle] ?? [];
 
-            if ($byLevel->isNotEmpty()) {
-                $canonicalLevels[] = (string) $byLevel->first()->level;
+            if ($levelMatches !== []) {
+                $canonicalLevels[] = (string) $levelMatches[0]->level;
                 $currentTypeId = $typeIds[$index] ?? null;
 
-                if (($currentTypeId === null || $currentTypeId === '') && $byLevel->count() === 1) {
-                    $typeIds[$index] = (int) $byLevel->first()->id;
+                if (($currentTypeId === null || $currentTypeId === '') && count($levelMatches) === 1) {
+                    $typeIds[$index] = (int) $levelMatches[0]->id;
                 }
 
                 continue;
             }
 
-            $byName = $types
-                ->filter(fn ($type) => $this->comparableDegreeText($type->type) === $needle)
-                ->values();
+            $nameMatches = $byName[$needle] ?? [];
 
-            if ($byName->count() === 1) {
-                $match = $byName->first();
+            if (count($nameMatches) === 1) {
+                $match = $nameMatches[0];
                 $canonicalLevels[] = (string) $match->level;
                 $currentTypeId = $typeIds[$index] ?? null;
 
@@ -445,13 +537,9 @@ class FinalProjectCrud extends Crud
     protected function alignImportStudyPrograms(array $programs): array
     {
         $example = 'misalnya Ilmu Komputer, Matematika, Fisika, Kimia, dan program studi lainnya';
-        $known = StudyProgram::query()
-            ->orderBy('id')
-            ->get(['id', 'study_program'])
-            ->filter(fn ($program) => trim((string) $program->study_program) !== '')
-            ->values();
+        $known = $this->importProgramByNeedle();
 
-        if ($known->isEmpty()) {
+        if ($known === []) {
             throw ValidationException::withMessages([
                 'program_study' => 'Tidak ada data program studi, sehingga impor tidak disimpan. Isi Program Studi terlebih dahulu, '.$example.'.',
             ]);
@@ -463,18 +551,8 @@ class FinalProjectCrud extends Crud
         foreach ($programs as $program) {
             $needle = $this->comparableDegreeText($program);
 
-            if ($needle === '') {
-                $missing[] = '(kosong)';
-
-                continue;
-            }
-
-            $match = $known->first(
-                fn ($row) => $this->comparableDegreeText($row->study_program) === $needle
-            );
-
-            if ($match) {
-                $canonical[] = (string) $match->study_program;
+            if ($needle !== '' && isset($known[$needle])) {
+                $canonical[] = $known[$needle];
 
                 continue;
             }
@@ -539,15 +617,15 @@ class FinalProjectCrud extends Crud
             'final_project_title' => ['required', 'array', 'size:'.$nimCount],
             'final_project_title.*' => ['required', 'string'],
             'program_study' => ['required', 'array', 'size:'.$nimCount],
-            'program_study.*' => ['required', 'string', 'max:255', 'exists:study_programs,study_program'],
+            'program_study.*' => ['required', 'string', 'max:255', Rule::in($this->importProgramNames())],
             'degree_level' => ['required', 'array', 'size:'.$nimCount],
-            'degree_level.*' => ['required', 'string', 'max:50', 'exists:final_project_types,level'],
+            'degree_level.*' => ['required', 'string', 'max:50', Rule::in($this->importLevelNames())],
             'final_project_year' => ['required', 'array', 'size:'.$nimCount],
             'final_project_year.*' => ['required', 'integer', 'min:'.FinalProject::YEAR_MIN, 'max:'.FinalProject::YEAR_MAX],
             'submission_date' => ['required', 'array', 'size:'.$nimCount],
             'submission_date.*' => ['required', 'string'],
             'final_project_type_id' => ['nullable', 'array'],
-            'final_project_type_id.*' => ['nullable', 'integer', 'exists:final_project_types,id'],
+            'final_project_type_id.*' => ['nullable', 'integer', Rule::in($this->importTypeIds())],
             'final_project_file' => ['nullable', 'array'],
             'final_project_file.*' => ['nullable', 'file', 'mimes:pdf'],
             'approval_sheet' => ['nullable', 'array'],
@@ -556,10 +634,10 @@ class FinalProjectCrud extends Crud
             'nim.max' => 'Impor maksimal 200 baris sekali proses.',
             'nim.min' => 'Tidak ada data impor yang dikirim.',
             'program_study.*.required' => 'Program studi harus diisi!',
-            'program_study.*.exists' => 'Program studi pada data impor tidak sesuai dengan program studi yang tersedia, sehingga data tidak disimpan. Sesuaikan data Program Studi, misalnya Ilmu Komputer, Matematika, Fisika, Kimia, dan program studi lainnya.',
+            'program_study.*.in' => 'Program studi pada data impor tidak sesuai dengan program studi yang tersedia, sehingga data tidak disimpan. Sesuaikan data Program Studi, misalnya Ilmu Komputer, Matematika, Fisika, Kimia, dan program studi lainnya.',
             'degree_level.*.required' => 'Jenjang harus dipilih!',
-            'degree_level.*.exists' => 'Jenjang pada data impor tidak sesuai dengan jenis tugas akhir yang tersedia, sehingga data tidak disimpan. Sesuaikan data Jenis Tugas Akhir, misalnya S1 = skripsi, S2 = tesis, S3 = disertasi, dan jenis lainnya.',
-            'final_project_type_id.*.exists' => 'Jenjang tidak valid!',
+            'degree_level.*.in' => 'Jenjang pada data impor tidak sesuai dengan jenis tugas akhir yang tersedia, sehingga data tidak disimpan. Sesuaikan data Jenis Tugas Akhir, misalnya S1 = skripsi, S2 = tesis, S3 = disertasi, dan jenis lainnya.',
+            'final_project_type_id.*.in' => 'Jenjang tidak valid!',
             'final_project_year.*.min' => 'Tahun tugas akhir tidak valid.',
             'final_project_year.*.max' => 'Tahun tugas akhir tidak valid.',
         ]);
@@ -635,10 +713,12 @@ class FinalProjectCrud extends Crud
             }
 
             DB::transaction(function () use ($rows) {
-                foreach (array_chunk($rows, 200) as $chunk) {
+                $size = BulkInsert::size(count($rows[0]), DB::connection()->getDriverName());
+
+                foreach (array_chunk($rows, $size) as $chunk) {
                     FinalProject::query()->insert($chunk);
                 }
-            });
+            }, 5);
 
             DataTables::touch();
             CatalogCache::forgetDashboard();

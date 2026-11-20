@@ -688,6 +688,8 @@ start_server() {
             export DB_CONNECTION=sqlite
             export DB_DATABASE="$ROOT/database/database.sqlite"
             export APP_DEBUG=false
+            export PHP_CLI_SERVER_WORKERS=4
+            export PHP_INI_SCAN_DIR=":$ROOT/laravel-assets/php"
             nohup "$PHP_BIN" -d variables_order=EGPCS artisan serve --host="$bind" --port="$port" --no-reload >>"$RUNTIME/server.out.log" 2>>"$RUNTIME/server.err.log" &
             printf '%s\n' "$!" > "$RUNTIME/server.pid"
         )

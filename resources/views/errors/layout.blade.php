@@ -37,5 +37,6 @@
             </div>
         </section>
     </main>
+    <script src="{{ asset_version('js/errors.js') }}" defer></script>
 </body>
 </html>

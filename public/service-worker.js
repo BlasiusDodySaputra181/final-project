@@ -9,7 +9,7 @@
  */
 importScripts('/js/offline-database.js');
 
-const CACHE_NAME = 'arsip-ta-v49';
+const CACHE_NAME = 'arsip-ta-v50';
 const SYNC_TAG = 'sync-outbox';
 
 const LOGIN_PRECACHE_URLS = [
@@ -151,6 +151,7 @@ const PRECACHE_URLS = [
     '/svg/loader-ring.svg',
     '/svg/auth-icons.svg',
     '/svg/trash.svg',
+    '/svg/confirm-trash.svg',
     '/svg/access-shield.svg',
     '/svg/access-blocked.svg',
     '/svg/metadata-hero.svg',

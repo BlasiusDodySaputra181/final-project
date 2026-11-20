@@ -332,8 +332,10 @@ extension_dir="ext"
 date.timezone=Asia/Jakarta
 memory_limit=512M
 upload_max_filesize=64M
-post_max_size=64M
-max_execution_time=120
+post_max_size=256M
+max_file_uploads=400
+max_input_vars=10000
+max_execution_time=300
 extension=curl
 extension=fileinfo
 extension=gd
@@ -709,6 +711,14 @@ function Start-ServerProcess([string]$Php, [int]$Port, [string]$Bind) {
         Remove-Item -LiteralPath $cacheDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+    # Four workers so a long import does not block search and other listings.
+    $env:PHP_CLI_SERVER_WORKERS = '4'
+    $limitsDir = Join-Path $Root 'laravel-assets\php'
+    if ($env:PHP_INI_SCAN_DIR) {
+        $env:PHP_INI_SCAN_DIR = $env:PHP_INI_SCAN_DIR.TrimEnd([System.IO.Path]::PathSeparator) + [System.IO.Path]::PathSeparator + $limitsDir
+    } else {
+        $env:PHP_INI_SCAN_DIR = $limitsDir
+    }
     $proc = Start-Process -FilePath $Php -ArgumentList @(
         'artisan', 'serve', "--host=$Bind", "--port=$Port", '--no-reload'
     ) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru

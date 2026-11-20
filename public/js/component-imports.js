@@ -7,6 +7,7 @@ if (typeof pdfjsLib !== 'undefined') {
 
 const importFileStore = new Map();
 const approvalSheetStore = new Map();
+const IMPORT_READERS = 2;
 
 /**
  * Comparable jenis-TA text: trimmed, one space between words, and lowercase.
@@ -422,6 +423,42 @@ function summarizeFailedFiles(names) {
     return `${preview}${extra}`;
 }
 
+function coverRateLimited(error) {
+    return /membatasi permintaan|rate limit/i.test(readerFailureMessage(error));
+}
+
+function requestCoverRows(text) {
+    const send = () => $.ajax({
+        url: '/reader/import',
+        type: 'POST',
+        timeout: 120000,
+        headers: {
+            'X-CSRF-TOKEN': csrfToken
+        },
+        data: {
+            text,
+            _token: csrfToken
+        }
+    });
+
+    return send().catch(error => {
+        if (!coverRateLimited(error) || isAiImportOffline()) {
+            throw error;
+        }
+
+        return new Promise((resolve, reject) => {
+            window.setTimeout(() => {
+                if (isAiImportOffline()) {
+                    reject(error);
+                    return;
+                }
+
+                send().then(resolve, reject);
+            }, 1500);
+        });
+    });
+}
+
 async function importPdfFiles() {
     if (!ensureAiKeyAndModelStored()) {
         return false;
@@ -450,7 +487,6 @@ async function importPdfFiles() {
     importFileStore.clear();
     approvalSheetStore.clear();
 
-    let rowNumber = 1;
     let processed = 0;
     let abortedOffline = false;
     const failedNames = [];
@@ -466,99 +502,129 @@ async function importPdfFiles() {
         lockProgressConfirm();
     }
 
-    try {
-        for (let i = 0; i < total; i++) {
-            // Check for offline without closing the progress UI (summary at the end of the loop)
+    const outcomes = new Array(total);
+    let cursor = 0;
+    let finished = 0;
+
+    const readOne = async (index) => {
+        const file = files[index];
+
+        setProgress(
+            'Memproses impor',
+            'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
+            Math.round((finished / total) * 100),
+            `Membaca "${file.name}"...`
+        );
+
+        const text = await parsePdfFile(file);
+
+        if (isAiImportOffline()) {
+            abortedOffline = true;
+            return;
+        }
+
+        setProgress(
+            'Memproses impor',
+            'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
+            Math.round((finished / total) * 100),
+            `Menganalisis "${file.name}" dengan kecerdasan buatan...`
+        );
+
+        outcomes[index] = { ok: true, file, rows: await requestCoverRows(text) };
+    };
+
+    const worker = async () => {
+        while (!abortedOffline) {
+            const index = cursor++;
+
+            if (index >= total) {
+                return;
+            }
+
             if (isAiImportOffline()) {
                 abortedOffline = true;
-                break;
+                return;
             }
 
-            const file = files[i];
+            const file = files[index];
 
             try {
-                setProgress(
-                    'Memproses impor',
-                    'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
-                    Math.round((i / total) * 100),
-                    `Membaca "${file.name}"...`
-                );
-
-                const text = await parsePdfFile(file);
-
-                if (isAiImportOffline()) {
-                    abortedOffline = true;
-                    break;
-                }
-
-                setProgress(
-                    'Memproses impor',
-                    'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
-                    Math.round((i / total) * 100),
-                    `Menganalisis "${file.name}" dengan kecerdasan buatan...`
-                );
-
-                const id = rowNumber++;
-                let rows;
-
-                try {
-                    rows = await $.ajax({
-                        url: '/reader/import',
-                        type: 'POST',
-                        timeout: 120000,
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        data: {
-                            text,
-                            _token: csrfToken
-                        }
-                    });
-                } catch (ajaxError) {
-                    if (isAiImportOffline() || ajaxError?.status === 0) {
-                        abortedOffline = true;
-                        break;
-                    }
-
-                    throw ajaxError;
-                }
-
-                importFileStore.set(id, file);
-
-                rows.forEach(row => {
-                    row.unshift(id);
-                    row.splice(7, 0, importDate, file.name, null);
-
-                    row[4] = normalizeImportedStudyProgram(row[4]);
-
-                    const degree = normalizeImportedDegreeLevel(row[5]);
-                    row[5] = degree.level;
-                    row[20] = degree.typeId;
-                });
-
-                importTable.rows.add(rows);
-                processed += 1;
-
-                setProgress(
-                    'Memproses impor',
-                    'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
-                    Math.round(((i + 1) / total) * 100),
-                    `Proses ${i + 1} dari ${total} berkas.`
-                );
+                await readOne(index);
             } catch (error) {
                 console.error(error);
-                failedNames.push(file.name);
-                failureReason = failureReason || readerFailureMessage(error);
+
+                if (isAiImportOffline() || error?.status === 0) {
+                    abortedOffline = true;
+                    return;
+                }
+
+                outcomes[index] = { ok: false, file, error };
+            } finally {
+                finished += 1;
+                const item = outcomes[index];
+                const reason = item?.ok === false ? readerFailureMessage(item.error) : '';
 
                 setProgress(
                     'Memproses impor',
                     'Data impor diproses dan disimpan sementara sebelum dikirim ke basis data.',
-                    Math.round(((i + 1) / total) * 100),
-                    failureReason
-                        ? `Gagal menganalisis "${file.name}". ${failureReason}`
-                        : `Gagal menganalisis "${file.name}". Melanjutkan berkas berikutnya...`
+                    Math.round((finished / total) * 100),
+                    item?.ok === false
+                        ? (reason
+                            ? `Gagal menganalisis "${file.name}". ${reason}`
+                            : `Gagal menganalisis "${file.name}". Melanjutkan berkas berikutnya...`)
+                        : `Proses ${finished} dari ${total} berkas.`
                 );
             }
+        }
+    };
+
+    try {
+        await Promise.all(Array.from(
+            { length: Math.min(IMPORT_READERS, total) },
+            () => worker()
+        ));
+
+        const tableRows = [];
+        let rowNumber = 1;
+
+        for (let i = 0; i < total; i++) {
+            const item = outcomes[i];
+
+            if (!item) {
+                continue;
+            }
+
+            if (!item.ok) {
+                failedNames.push(item.file.name);
+                failureReason = failureReason || readerFailureMessage(item.error);
+                continue;
+            }
+
+            if (!Array.isArray(item.rows)) {
+                failedNames.push(item.file.name);
+                failureReason = failureReason || 'Respons analisis tidak valid.';
+                continue;
+            }
+
+            const id = rowNumber++;
+            importFileStore.set(id, item.file);
+
+            item.rows.forEach(row => {
+                row.unshift(id);
+                row.splice(7, 0, importDate, item.file.name, null);
+                row[4] = normalizeImportedStudyProgram(row[4]);
+
+                const degree = normalizeImportedDegreeLevel(row[5]);
+                row[5] = degree.level;
+                row[20] = degree.typeId;
+                tableRows.push(row);
+            });
+
+            processed += 1;
+        }
+
+        if (tableRows.length) {
+            importTable.rows.add(tableRows);
         }
 
         importTable.draw(false);

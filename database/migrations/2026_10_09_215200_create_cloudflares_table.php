@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('cloudflares')) {
+            return;
+        }
+
         Schema::create('cloudflares', function (Blueprint $table) {
             $table->id();
             $table->string('link', 200);

@@ -3,6 +3,7 @@
 namespace App\Setup;
 
 use App\Models\Setting;
+use App\Support\BulkInsert;
 use App\Support\FinalProjectStorage;
 use App\Support\LocalStack;
 use App\Support\ProjectSearchIndex;
@@ -840,11 +841,12 @@ class PortableDatabase
         }
 
         $order = in_array('id', $columns, true) ? 'id' : $columns[0];
-        $write = function () use ($driver, $targetConnection, $table, $columns, $order): int {
+        $batchSize = BulkInsert::size(count($columns), DB::connection($targetConnection)->getDriverName());
+        $write = function () use ($driver, $targetConnection, $table, $columns, $order, $batchSize): int {
             $target = DB::connection($targetConnection);
             $count = 0;
 
-            $target->transaction(function () use ($target, $driver, $table, $columns, $order, &$count) {
+            $target->transaction(function () use ($target, $driver, $table, $columns, $order, $batchSize, &$count) {
                 $target->table($table)->delete();
                 $batch = [];
 
@@ -858,7 +860,7 @@ class PortableDatabase
                     $batch[] = $item;
                     $count++;
 
-                    if (count($batch) >= 400) {
+                    if (count($batch) >= $batchSize) {
                         $target->table($table)->insert($batch);
                         $batch = [];
                     }
@@ -867,7 +869,7 @@ class PortableDatabase
                 if ($batch !== []) {
                     $target->table($table)->insert($batch);
                 }
-            });
+            }, 5);
 
             return $count;
         };

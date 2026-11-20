@@ -402,16 +402,27 @@ final class DataTables
             : $query->clone()->reorder();
 
         $key = 'dt.c.'.self::revision().'.'.md5($counter->toSql().'|'.json_encode($counter->getBindings()));
-        $cached = Cache::get($key);
 
-        if (! app()->runningUnitTests() && is_int($cached)) {
-            return $cached;
+        if (! app()->runningUnitTests()) {
+            try {
+                $cached = Cache::get($key);
+
+                if (is_int($cached)) {
+                    return $cached;
+                }
+            } catch (\Throwable) {
+                // A cache miss still counts from the database.
+            }
         }
 
         $count = (int) $counter->getCountForPagination();
 
         if (! app()->runningUnitTests()) {
-            Cache::put($key, $count, self::COUNT_CACHE_TTL);
+            try {
+                Cache::put($key, $count, self::COUNT_CACHE_TTL);
+            } catch (\Throwable) {
+                //
+            }
         }
 
         return $count;
@@ -486,7 +497,12 @@ final class DataTables
         }
 
         self::$revision = self::revision() + 1;
-        Cache::put(self::REVISION_KEY, self::$revision, 86400);
+
+        try {
+            Cache::put(self::REVISION_KEY, self::$revision, 86400);
+        } catch (\Throwable) {
+            //
+        }
     }
 
     private static function revision(): int
@@ -499,7 +515,11 @@ final class DataTables
             return self::$revision = 0;
         }
 
-        return self::$revision = (int) Cache::get(self::REVISION_KEY, 0);
+        try {
+            return self::$revision = (int) Cache::get(self::REVISION_KEY, 0);
+        } catch (\Throwable) {
+            return self::$revision = 0;
+        }
     }
 
     /**

@@ -93,9 +93,10 @@ class AppServiceProvider extends ServiceProvider
         try {
             DB::statement('PRAGMA journal_mode = WAL');
             DB::statement('PRAGMA synchronous = NORMAL');
-            DB::statement('PRAGMA busy_timeout = 8000');
+            DB::statement('PRAGMA busy_timeout = 20000');
             DB::statement('PRAGMA temp_store = MEMORY');
             DB::statement('PRAGMA cache_size = -65536');
+            DB::statement('PRAGMA wal_autocheckpoint = 4000');
         } catch (\Throwable) {
             return;
         }
